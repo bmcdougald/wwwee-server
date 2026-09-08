@@ -10,7 +10,7 @@
 .vscode/
 
 # Local deployment environment configuration
-
+.env
 
 # Node / Vite / Vitest test harness
 test/node_modules/
