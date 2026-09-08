@@ -16,11 +16,17 @@ services:
       - /tmp:mode=1700,uid=65532,gid=65532
     user: "65532:65532"
     volumes:
-      # Production site content lives outside the image in a Docker-managed
-      # persistent volume and is exposed to the server read-only.
-      - wwwee-content:/srv/content:ro
+      # Site content is managed outside the container and published by the
+      # deployment/content pipeline. The server only reads it.
+      - type: bind
+        source: ${WWWEE_CONTENT_PATH:?WWWEE_CONTENT_PATH must point to the persistent site-content directory}
+        target: /srv/content
+        read_only: true
       # Optional direct TLS certificate and private-key mount.
-      # - ./certs:/run/tls:ro
+      # - type: bind
+      #   source: ./certs
+      #   target: /run/tls
+      #   read_only: true
     environment:
       WWWEE_ADDR: ":8080"
       WWWEE_CONTENT_DIR: "/srv/content"
@@ -33,8 +39,3 @@ services:
       start_period: 5s
       retries: 3
     restart: unless-stopped
-
-volumes:
-  # Docker-managed persistent site content. Populate this volume through the
-  # content publishing process; the web server only reads from it.
-  wwwee-content:
