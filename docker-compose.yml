@@ -26,19 +26,6 @@ services:
     environment:
       WWWEE_ADDR: ":8080"
       WWWEE_CONTENT_DIR: "/srv/content"
-      # For direct HTTPS, uncomment the TLS mounts and environment variables
-      # below and change the port mapping/listen address as appropriate.
-      # - type: bind
-      #   source: ${WWWEE_TLS_CERT_PATH}
-      #   target: /run/tls/tls.crt
-      #   read_only: true
-      # - type: bind
-      #   source: ${WWWEE_TLS_KEY_PATH}
-      #   target: /run/tls/tls.key
-      #   read_only: true
-      # WWWEE_ADDR: ":8443"
-      # WWWEE_TLS_CERT_FILE: "/run/tls/tls.crt"
-      # WWWEE_TLS_KEY_FILE: "/run/tls/tls.key"
     healthcheck:
       test: ["CMD", "/wwwee-server", "-healthcheck"]
       interval: 30s
@@ -46,3 +33,20 @@ services:
       start_period: 5s
       retries: 3
     restart: unless-stopped
+
+# Direct HTTPS is intentionally configured by the implementer when required.
+# Add these bind mounts under the service's volumes and the corresponding
+# environment variables when using direct TLS:
+#
+#   - type: bind
+#     source: ${WWWEE_TLS_CERT_PATH}
+#     target: /run/tls/tls.crt
+#     read_only: true
+#   - type: bind
+#     source: ${WWWEE_TLS_KEY_PATH}
+#     target: /run/tls/tls.key
+#     read_only: true
+#
+#   WWWEE_ADDR: ":8443"
+#   WWWEE_TLS_CERT_FILE: "/run/tls/tls.crt"
+#   WWWEE_TLS_KEY_FILE: "/run/tls/tls.key"
