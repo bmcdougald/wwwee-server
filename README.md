@@ -5,6 +5,11 @@ intranet site. It is designed to run as a container — standalone with
 Docker/Podman or orchestrated with Kubernetes — and to be as small and
 boring as possible.
 
+The server image contains the web server application only. **Production site
+content is external to the image and is supplied at runtime from persistent
+storage.** This keeps the server stateless and allows website content to be
+published independently of the server image.
+
 ## Design goals
 
 - **Minimal dependencies.** The server is written in Go using only the
@@ -17,9 +22,60 @@ boring as possible.
   compatible, all Linux capabilities droppable, restrictive security
   headers, method allow-listing, path-traversal and dotfile protection,
   request timeouts, and graceful shutdown.
+- **Externalized site content.** The image contains no production website
+  files. `/srv/content` is a runtime mount point for externally managed
+  persistent content and is mounted read-only by the server.
 - **Kubernetes- and standalone-friendly.** Works as a bare `docker run`
   container or behind a Kubernetes `Deployment`, with `/healthz` (liveness)
   and `/readyz` (readiness) endpoints and example manifests in [k8s/](k8s).
+
+## Deployment architecture
+
+The intended production model separates the server application from the
+website content:
+
+```text
+GitLab website project(s)
+        |
+        | merge to main
+        v
+GitLab CI/CD
+  - lint / test / scan
+  - publish site content
+        |
+        v
+Persistent site storage
+        |
+        | mounted read-only
+        v
+wwwee-server container
+        |
+        v
+/srv/content
+        |
+        v
+Intranet users
+```
+
+The same separation applies whether the server runs under Docker or
+Kubernetes:
+
+- The **server image** contains only the compiled `wwwee-server` application
+  and its runtime environment.
+- **Site content** is authoritative in GitLab and is published by the content
+  pipeline to persistent runtime storage.
+- The server mounts that storage at `/srv/content` **read-only**.
+- The server does not need GitLab credentials and does not write to the site
+  content.
+- Replacing or upgrading the server container does not replace the website
+  content.
+- Updating published site files does not require rebuilding the server image
+  and does not inherently require restarting the server.
+
+The exact persistent-storage technology is intentionally left to the
+platform. Docker uses a Docker-managed volume in the supplied Compose
+example; Kubernetes uses a PersistentVolumeClaim. Neither example requires a
+fixed host filesystem path such as `/opt/wwwee` or `/var/www`.
 
 ## Hardening approach (Container Platform SRG / Kubernetes STIG)
 
@@ -55,10 +111,10 @@ See [k8s/deployment.yaml](k8s/deployment.yaml) for the equivalent Pod
 cmd/server/           main entrypoint (flags, graceful shutdown, self-healthcheck)
 internal/config/      environment-based configuration
 internal/httpserver/  static file handler, health handlers, security middleware
-content/              default static site content (baked in as a fallback)
-Dockerfile            multi-stage, distroless, non-root build
-docker-compose.yml    example hardened standalone deployment
-k8s/                  example hardened Kubernetes Deployment/Service
+content/              sample static site content used for local development and tests
+Dockerfile            multi-stage, distroless, non-root server image
+docker-compose.yml    example hardened Docker deployment using persistent content storage
+k8s/                  example hardened Kubernetes Deployment/Service/PVC
 test/                 Vite + Vitest + Playwright test suite (builds & runs the
                        real container image, then exercises it over HTTP and
                        in a real headless browser)
@@ -74,17 +130,17 @@ to keep the dependency surface at zero):
 | `WWWEE_ADDR`                                 | `:8080`        | Listen address                                   |
 | `WWWEE_CONTENT_DIR`                          | `/srv/content` | Directory to serve                               |
 | `WWWEE_TLS_CERT_FILE` / `WWWEE_TLS_KEY_FILE` | unset          | Enable TLS (both required together)              |
-| `WWWEE_READ_HEADER_TIMEOUT`                  | `5s`           | Slowloris mitigation                             |
-| `WWWEE_READ_TIMEOUT`                         | `10s`          | Max time to read a request                       |
-| `WWWEE_WRITE_TIMEOUT`                        | `10s`          | Max time to write a response                     |
-| `WWWEE_IDLE_TIMEOUT`                         | `120s`         | Keep-alive idle timeout                          |
-| `WWWEE_SHUTDOWN_TIMEOUT`                     | `15s`          | Grace period for in-flight requests on `SIGTERM` |
+| `WWWEE_READ_HEADER_TIMEOUT`                  | `5s`            | Slowloris mitigation                             |
+| `WWWEE_READ_TIMEOUT`                         | `10s`           | Max time to read a request                       |
+| `WWWEE_WRITE_TIMEOUT`                        | `10s`           | Max time to write a response                     |
+| `WWWEE_IDLE_TIMEOUT`                         | `120s`          | Keep-alive idle timeout                          |
+| `WWWEE_SHUTDOWN_TIMEOUT`                     | `15s`           | Grace period for in-flight requests on `SIGTERM` |
 
 ## Mount points
 
-- `/srv/content` (Docker `VOLUME`) — the intranet site content. Mount your
-  real content here (read-only recommended); the image ships a small
-  placeholder page as a fallback so the container is usable out of the box.
+- `/srv/content` (Docker `VOLUME`) — the externally supplied intranet site
+  content. It should be mounted read-only. The production website is **not**
+  baked into the image.
 - Optional: mount TLS certificate/key material anywhere and point
   `WWWEE_TLS_CERT_FILE` / `WWWEE_TLS_KEY_FILE` at the mounted paths.
 - CSS and JavaScript are served as ordinary static files. Same-origin
@@ -97,15 +153,39 @@ to keep the dependency surface at zero):
 
 ## Running standalone
 
+### Docker-managed persistent volume
+
+The supplied standalone example uses a Docker-managed named volume rather
+than a host filesystem path:
+
 ```sh
 docker build -t wwwee-server:local .
+docker volume create wwwee-content
 
 docker run -d --name wwwee-server -p 8080:8080 \
   --read-only --cap-drop=ALL --security-opt no-new-privileges \
   --tmpfs /tmp:mode=1700 \
-  -v "$PWD/content:/srv/content:ro" \
+  -v wwwee-content:/srv/content:ro \
   wwwee-server:local
 ```
+
+A newly created volume is empty. In production, the content publishing
+pipeline is responsible for populating the volume. For a local demonstration,
+you can seed the Docker-managed volume from the repository's sample `content/`
+directory with a temporary helper container:
+
+```sh
+docker run --rm \
+  -v wwwee-content:/srv/content \
+  -v "$PWD/content:/source:ro" \
+  alpine sh -c 'cp -a /source/. /srv/content/'
+```
+
+The helper is only a convenient local seeding mechanism; the production
+server remains read-only and does not require Alpine, Git, or any content
+management tools.
+
+### Direct HTTPS
 
 For direct HTTPS, mount a certificate and private key and change the listen
 address. The certificate should include the hostname users will browse to:
@@ -114,7 +194,7 @@ address. The certificate should include the hostname users will browse to:
 docker run -d --name wwwee-server -p 8443:8443 \
   --read-only --cap-drop=ALL --security-opt no-new-privileges \
   --tmpfs /tmp:mode=1700 \
-  -v "$PWD/content:/srv/content:ro" \
+  -v wwwee-content:/srv/content:ro \
   -v "$PWD/certs:/run/tls:ro" \
   -e WWWEE_ADDR=:8443 \
   -e WWWEE_TLS_CERT_FILE=/run/tls/tls.crt \
@@ -132,19 +212,39 @@ will produce a browser warning until it is trusted). In production, TLS may
 instead terminate at an approved ingress or load balancer; the server also
 supports direct TLS when that is preferable.
 
-or with the provided hardened compose file:
+### Docker Compose
+
+The provided Compose file uses the same persistent-storage model:
 
 ```sh
 docker compose up --build
 ```
+
+It mounts the Docker-managed `wwwee-content` volume at `/srv/content`
+read-only. Populate that volume through the content publishing process, or
+seed it with the local helper command above for a demonstration. The server
+image itself never needs to be rebuilt when only site content changes.
 
 Visit http://localhost:8080/, http://localhost:8080/healthz and
 http://localhost:8080/readyz.
 
 ## Running on Kubernetes
 
+The Kubernetes example uses a PersistentVolumeClaim because the website
+content is external to the server image. The Deployment has two replicas,
+so the storage provider must support **ReadWriteMany (RWX)** access for the
+shared content volume.
+
+First create the content volume and populate it through your approved content
+publishing pipeline:
+
 ```sh
-kubectl create configmap wwwee-server-content --from-file=content
+kubectl apply -f k8s/pvc.yaml
+```
+
+Then provision TLS and deploy the server:
+
+```sh
 kubectl create secret tls wwwee-server-tls \
   --cert=certs/tls.crt --key=certs/tls.key
 kubectl apply -f k8s/deployment.yaml -f k8s/service.yaml
@@ -156,9 +256,11 @@ certificate-management system such as cert-manager or your organization's
 approved PKI process to provision and rotate that Secret; do not commit
 private keys to the repository.
 
-For real (larger) site content, replace the `ConfigMap` volume in
-[k8s/deployment.yaml](k8s/deployment.yaml) with a `PersistentVolumeClaim`
-populated by your content publishing pipeline.
+The PVC is intentionally storage-provider-neutral. Do not assume that every
+Kubernetes cluster provides RWX storage by default; select or provision an
+approved RWX-capable storage class for your environment. The content
+publishing pipeline should update the persistent volume independently of the
+server Deployment.
 
 ## Testing
 
@@ -170,8 +272,12 @@ go build ./...
 ```
 
 The `test/` directory contains a Vite + Vitest test suite that builds the
-real Docker image, runs it with the same hardening flags as production,
-and verifies it end-to-end:
+real Docker image, runs it with the same hardening flags as production, and
+mounts the repository's `content/` directory as an explicit read-only test
+fixture. This keeps test content available without putting website content
+into the production image.
+
+It verifies the application end-to-end:
 
 - HTTP-level checks (`test/tests/health.test.ts`): health/readiness
   endpoints, security headers, method restrictions, path-traversal and
@@ -219,9 +325,9 @@ Container Hardening Process Guide §5–6). It fails unless every reported
   explained, with its remediation path, in the accepted-findings file.
 - The SCAP content used here is a community-maintained (Chainguard) GPOS-
   aligned datastream, not an artifact hosted by DISA itself. Treat this as
-  a fast local/CI compliance signal, not a substitute for the
-  authoritative DISA STIG/SRG artifacts (public.cyber.mil/stigs) required
-  in a formal ATO/FedRAMP assessment.
+  a fast local/CI compliance signal, not a substitute for the authoritative
+  DISA STIG/SRG artifacts (public.cyber.mil/stigs) required in a formal
+  ATO/FedRAMP assessment.
 - This scan is intentionally kept separate from `npm test`: it needs
   `--pid=host` and Docker-socket access to introspect the built image,
   which is more privileged than the rest of the hardened test suite
