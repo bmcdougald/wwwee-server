@@ -16,8 +16,9 @@ services:
       - /tmp:mode=1700,uid=65532,gid=65532
     user: "65532:65532"
     volumes:
-      # Mount real site content read-only; the server never writes to it.
-      - ./content:/srv/content:ro
+      # Production site content lives outside the image in a Docker-managed
+      # persistent volume and is exposed to the server read-only.
+      - wwwee-content:/srv/content:ro
       # Optional direct TLS certificate and private-key mount.
       # - ./certs:/run/tls:ro
     environment:
@@ -32,3 +33,8 @@ services:
       start_period: 5s
       retries: 3
     restart: unless-stopped
+
+volumes:
+  # Docker-managed persistent site content. Populate this volume through the
+  # content publishing process; the web server only reads from it.
+  wwwee-content:
