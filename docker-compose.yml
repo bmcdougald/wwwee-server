@@ -18,15 +18,14 @@ services:
     volumes:
       # Site content is managed outside the container and published by the
       # deployment/content pipeline. The server only reads it.
+      #
+      # Local default: ./.runtime/content (easy to populate from the repo).
+      # Production: set WWWEE_CONTENT_PATH to the platform's persistent
+      # filesystem location, e.g. /var/lib/wwwee/content on Linux.
       - type: bind
-        source: ${WWWEE_CONTENT_PATH:?WWWEE_CONTENT_PATH must point to the persistent site-content directory}
+        source: ${WWWEE_CONTENT_PATH:-./.runtime/content}
         target: /srv/content
         read_only: true
-      # Optional direct TLS certificate and private-key mount.
-      # - type: bind
-      #   source: ./certs
-      #   target: /run/tls
-      #   read_only: true
     environment:
       WWWEE_ADDR: ":8080"
       WWWEE_CONTENT_DIR: "/srv/content"
