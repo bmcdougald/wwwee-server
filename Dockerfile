@@ -41,9 +41,9 @@ USER nonroot:nonroot
 EXPOSE 8080
 
 # Site content is supplied by externally managed persistent storage and should
-# be mounted read-only. The server image never contains or modifies production
-# website content.
-VOLUME ["/srv/content"]
+# be mounted read-only. The deployment environment owns the storage location.
+# No Docker-managed VOLUME is declared here; the content mount is intentionally
+# supplied by the runtime/deployment configuration.
 
 # The image has no shell, so the binary performs its own health probe.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
