@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wwwee-content
+  labels:
+    app.kubernetes.io/name: wwwee-server
+spec:
+  # The Deployment has two replicas, so the example requires a storage
+  # provider that supports ReadWriteMany (RWX). Use the cluster's default
+  # StorageClass unless your environment requires a specific one.
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
