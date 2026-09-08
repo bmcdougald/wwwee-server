@@ -72,10 +72,17 @@ Kubernetes:
 - Updating published site files does not require rebuilding the server image
   and does not inherently require restarting the server.
 
-The exact persistent-storage technology is intentionally left to the
-platform. Docker uses a Docker-managed volume in the supplied Compose
-example; Kubernetes uses a PersistentVolumeClaim. Neither example requires a
-fixed host filesystem path such as `/opt/wwwee` or `/var/www`.
+For standalone Docker deployments, the host-side content location is supplied
+by the implementer through `WWWEE_CONTENT_PATH` in `.env`. The Compose file
+maps that host directory to the fixed container path `/srv/content` and
+mounts it read-only. This avoids imposing a host filesystem convention and
+allows the same Compose configuration to be used on macOS, Linux, or another
+Docker host where the implementer has an appropriate persistent filesystem
+location.
+
+Kubernetes uses a PersistentVolumeClaim for the same purpose. The pipeline or
+other approved deployment process is responsible for publishing content to
+the persistent storage; the server only consumes it read-only.
 
 ## Hardening approach (Container Platform SRG / Kubernetes STIG)
 
@@ -112,8 +119,9 @@ cmd/server/           main entrypoint (flags, graceful shutdown, self-healthchec
 internal/config/      environment-based configuration
 internal/httpserver/  static file handler, health handlers, security middleware
 content/              sample static site content used for local development and tests
+.env.example          deployment-specific host paths for content and optional TLS material
 Dockerfile            multi-stage, distroless, non-root server image
-docker-compose.yml    example hardened Docker deployment using persistent content storage
+docker-compose.yml    example hardened Docker deployment using an external host content path
 k8s/                  example hardened Kubernetes Deployment/Service/PVC
 test/                 Vite + Vitest + Playwright test suite (builds & runs the
                        real container image, then exercises it over HTTP and
@@ -122,8 +130,13 @@ test/                 Vite + Vitest + Playwright test suite (builds & runs the
 
 ## Configuration
 
-All configuration is via environment variables (no config file parsing,
-to keep the dependency surface at zero):
+The application itself is configured through environment variables (no config
+file parsing, to keep the dependency surface at zero). Docker Compose also
+uses a `.env` file for **deployment-specific host filesystem paths**. The
+`.env` file is intentionally ignored by Git; use [.env.example](.env.example)
+as the template.
+
+### Application configuration
 
 | Variable                                     | Default        | Purpose                                          |
 | -------------------------------------------- | -------------- | ------------------------------------------------ |
@@ -133,16 +146,42 @@ to keep the dependency surface at zero):
 | `WWWEE_READ_HEADER_TIMEOUT`                  | `5s`            | Slowloris mitigation                             |
 | `WWWEE_READ_TIMEOUT`                         | `10s`           | Max time to read a request                       |
 | `WWWEE_WRITE_TIMEOUT`                        | `10s`           | Max time to write a response                     |
-| `WWWEE_IDLE_TIMEOUT`                         | `120s`          | Keep-alive idle timeout                          |
+| `WWWEE_IDLE_TIMEOUT`                         | `120s`         | Keep-alive idle timeout                          |
 | `WWWEE_SHUTDOWN_TIMEOUT`                     | `15s`           | Grace period for in-flight requests on `SIGTERM` |
+
+### Deployment path configuration
+
+`.env` contains host-side paths that vary by deployment environment:
+
+```dotenv
+# Host-side directory containing the published website content.
+WWWEE_CONTENT_PATH=/path/to/wwwee/content
+
+# Host-side TLS certificate and private-key paths.
+# Used when direct HTTPS is enabled in docker-compose.yml.
+WWWEE_TLS_CERT_PATH=/path/to/tls/tls.crt
+WWWEE_TLS_KEY_PATH=/path/to/tls/tls.key
+```
+
+The implementer chooses paths appropriate for the host and ensures the
+content directory exists and is writable by the content publishing process.
+The web server receives the content directory read-only at `/srv/content`.
+TLS certificate and key files are also mounted read-only when direct HTTPS is
+configured.
+
+Do not commit `.env` or private keys to the repository. `.env.example`
+contains placeholders only.
 
 ## Mount points
 
-- `/srv/content` (Docker `VOLUME`) — the externally supplied intranet site
-  content. It should be mounted read-only. The production website is **not**
-  baked into the image.
-- Optional: mount TLS certificate/key material anywhere and point
-  `WWWEE_TLS_CERT_FILE` / `WWWEE_TLS_KEY_FILE` at the mounted paths.
+- `/srv/content` — externally supplied intranet site content. The Docker
+  Compose deployment bind-mounts the host directory selected by
+  `WWWEE_CONTENT_PATH`; Kubernetes mounts the content PVC. The server mounts
+  the content read-only and the production website is **not** baked into the
+  image.
+- `/run/tls/tls.crt` and `/run/tls/tls.key` — optional direct-HTTPS certificate
+  and private key mount points. Their host-side locations are supplied by
+  `WWWEE_TLS_CERT_PATH` and `WWWEE_TLS_KEY_PATH` when direct HTTPS is enabled.
 - CSS and JavaScript are served as ordinary static files. Same-origin
   external scripts are allowed by the default CSP; inline `<script>` blocks
   and inline event handlers are blocked by design. Put scripts in the content
@@ -153,59 +192,93 @@ to keep the dependency surface at zero):
 
 ## Running standalone
 
-### Docker-managed persistent volume
+### Docker with externally managed content
 
-The supplied standalone example uses a Docker-managed named volume rather
-than a host filesystem path:
+The standalone Docker deployment uses a **host bind mount**, not a
+Docker-managed named volume. This is intentional: the website content is an
+externally managed deployment artifact that the content pipeline or operator
+must be able to write directly to persistent host storage.
+
+Copy the environment template and set the paths for the deployment host:
 
 ```sh
-docker build -t wwwee-server:local .
-docker volume create wwwee-content
-
-docker run -d --name wwwee-server -p 8080:8080 \
-  --read-only --cap-drop=ALL --security-opt no-new-privileges \
-  --tmpfs /tmp:mode=1700 \
-  -v wwwee-content:/srv/content:ro \
-  wwwee-server:local
+cp .env.example .env
 ```
 
-A newly created volume is empty. In production, the content publishing
-pipeline is responsible for populating the volume. For a local demonstration,
-you can seed the Docker-managed volume from the repository's sample `content/`
-directory with a temporary helper container:
+Edit `.env` so `WWWEE_CONTENT_PATH` points to a directory that the deployment
+process can write. For example:
 
-```sh
-docker run --rm \
-  -v wwwee-content:/srv/content \
-  -v "$PWD/content:/source:ro" \
-  alpine sh -c 'cp -a /source/. /srv/content/'
+```dotenv
+WWWEE_CONTENT_PATH=/path/to/wwwee/content
 ```
 
-The helper is only a convenient local seeding mechanism; the production
-server remains read-only and does not require Alpine, Git, or any content
-management tools.
-
-### Direct HTTPS
-
-For direct HTTPS, mount a certificate and private key and change the listen
-address. The certificate should include the hostname users will browse to:
+Create the directory and populate it with the site content:
 
 ```sh
-docker run -d --name wwwee-server -p 8443:8443 \
-  --read-only --cap-drop=ALL --security-opt no-new-privileges \
-  --tmpfs /tmp:mode=1700 \
-  -v wwwee-content:/srv/content:ro \
-  -v "$PWD/certs:/run/tls:ro" \
-  -e WWWEE_ADDR=:8443 \
-  -e WWWEE_TLS_CERT_FILE=/run/tls/tls.crt \
-  -e WWWEE_TLS_KEY_FILE=/run/tls/tls.key \
-  wwwee-server:local
+mkdir -p /path/to/wwwee/content
+cp -a content/. /path/to/wwwee/content/
+```
+
+Then start the server:
+
+```sh
+docker compose up --build -d
+```
+
+The container sees the host directory at `/srv/content`, read-only. Changes
+to files in the host content directory are therefore visible to the running
+server without rebuilding the image or restarting the container.
+
+For example, after editing a published file:
+
+```sh
+cp -a updated-site/. /path/to/wwwee/content/
+```
+
+The server continues serving from the same mount; no image rebuild is
+required.
+
+### Direct HTTPS with Docker
+
+Direct HTTPS uses the same `.env` deployment configuration. Set the
+certificate and private-key paths:
+
+```dotenv
+WWWEE_CONTENT_PATH=/path/to/wwwee/content
+WWWEE_TLS_CERT_PATH=/path/to/tls/tls.crt
+WWWEE_TLS_KEY_PATH=/path/to/tls/tls.key
+```
+
+The base Compose example defaults to HTTP on port 8080. To enable direct
+HTTPS, add the following TLS mounts to the service's `volumes` section in
+`docker-compose.yml`:
+
+```yaml
+      - type: bind
+        source: ${WWWEE_TLS_CERT_PATH}
+        target: /run/tls/tls.crt
+        read_only: true
+      - type: bind
+        source: ${WWWEE_TLS_KEY_PATH}
+        target: /run/tls/tls.key
+        read_only: true
+```
+
+and configure the service environment and port mapping for HTTPS:
+
+```yaml
+    ports:
+      - "8443:8443"
+    environment:
+      WWWEE_ADDR: ":8443"
+      WWWEE_CONTENT_DIR: "/srv/content"
+      WWWEE_TLS_CERT_FILE: "/run/tls/tls.crt"
+      WWWEE_TLS_KEY_FILE: "/run/tls/tls.key"
 ```
 
 The mounted key must be readable by the container's non-root uid `65532`
 (for example, use host ownership `65532:65532` and mode `0400`, or group
-ownership `:65532` and mode `0440`). Kubernetes handles this through the
-deployment `fsGroup` and Secret mode `0440`.
+ownership `:65532` and mode `0440`).
 
 Then browse to `https://localhost:8443/` (a locally generated certificate
 will produce a browser warning until it is trusted). In production, TLS may
@@ -214,19 +287,30 @@ supports direct TLS when that is preferable.
 
 ### Docker Compose
 
-The provided Compose file uses the same persistent-storage model:
+The provided Compose file is the recommended local/standalone Docker example:
 
 ```sh
-docker compose up --build
+docker compose up --build -d
 ```
 
-It mounts the Docker-managed `wwwee-content` volume at `/srv/content`
-read-only. Populate that volume through the content publishing process, or
-seed it with the local helper command above for a demonstration. The server
-image itself never needs to be rebuilt when only site content changes.
+It requires `WWWEE_CONTENT_PATH` to be defined in `.env` and bind-mounts that
+host directory to `/srv/content` read-only. The host path is intentionally not
+hard-coded so each deployment can choose a location appropriate to its
+filesystem permissions and operational model.
 
 Visit http://localhost:8080/, http://localhost:8080/healthz and
 http://localhost:8080/readyz.
+
+To change the content location, update `WWWEE_CONTENT_PATH` in `.env`, ensure
+the new directory contains the published site, and recreate the container:
+
+```sh
+docker compose down
+docker compose up -d
+```
+
+No application or Dockerfile change is required to change the host content
+location.
 
 ## Running on Kubernetes
 
@@ -311,7 +395,7 @@ Container Hardening Process Guide §5–6). It fails unless every reported
 ```
 
 - Requires Docker and, on first run, network access to fetch the SCAP
-  content (cached under `.cache/openscap/` afterwards).
+  content (cached under `.cache/openscap/`) afterwards.
 - Writes a human-readable report to `openscap-out/report.html` and raw
   XCCDF results to `openscap-out/results.xml` (both git-ignored).
 - Findings are gated against
