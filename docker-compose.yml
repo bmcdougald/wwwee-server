@@ -21,7 +21,7 @@ services:
       #
       # Local default: ./.runtime/content (easy to populate from the repo).
       # Production: set WWWEE_CONTENT_PATH to the platform's persistent
-      # filesystem location, e.g. /var/lib/wwwee/content on Linux.
+      # filesystem location, e.g. /srv/wwwee/content on Linux.
       - type: bind
         source: ${WWWEE_CONTENT_PATH:-./.runtime/content}
         target: /srv/content
