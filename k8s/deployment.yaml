@@ -27,8 +27,6 @@ spec:
           image: wwwee-server:local
           imagePullPolicy: IfNotPresent
           ports:
-            - name: http
-              containerPort: 8080
             - name: https
               containerPort: 8443
           env:
@@ -54,14 +52,16 @@ spec:
               memory: 64Mi
           livenessProbe:
             httpGet:
+              scheme: HTTPS
               path: /healthz
-              port: http
+              port: https
             initialDelaySeconds: 3
             periodSeconds: 15
           readinessProbe:
             httpGet:
+              scheme: HTTPS
               path: /readyz
-              port: http
+              port: https
             initialDelaySeconds: 3
             periodSeconds: 10
           volumeMounts:
