@@ -8,8 +8,8 @@
 # Editor/OS cruft
 .DS_Store
 
-# Local runtime content mount (Docker Compose default)
-/.runtime/
+# Local deployment environment configuration
+.env
 
 # Node / Vite / Vitest test harness
 test/node_modules/
