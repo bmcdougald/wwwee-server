@@ -28,7 +28,8 @@ async function waitForHealthy(timeoutMs = 60_000) {
 
 // Vitest globalSetup: builds the hardened container image, runs it with the
 // same restrictions as production (read-only rootfs, all caps dropped, no
-// new privileges), and waits for it to report healthy before tests run.
+// new privileges), and mounts the repository's sample content as a test
+// fixture. Production site content is supplied by external persistent storage.
 export default async function setup() {
   try {
     execSync(`docker rm -f ${CONTAINER_NAME}`, {
@@ -43,7 +44,8 @@ export default async function setup() {
   sh(
     `docker run -d --rm --name ${CONTAINER_NAME} -p ${TEST_PORT}:8080 ` +
       `--read-only --cap-drop=ALL --security-opt no-new-privileges ` +
-      `--tmpfs /tmp:mode=1700 ${IMAGE_TAG}`,
+      `--tmpfs /tmp:mode=1700 ` +
+      `-v "${path.join(repoRoot, "content")}:/srv/content:ro" ${IMAGE_TAG}`,
   );
 
   await waitForHealthy();
