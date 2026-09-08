@@ -20,6 +20,7 @@ RUN go vet ./... \
 # --------------------------------------------------------------------------
 # Final stage: distroless, non-root, no shell/package manager/compiler -
 # satisfies the Container Platform SRG minimization requirements.
+# The image contains the web server only; site content is supplied at runtime.
 # --------------------------------------------------------------------------
 FROM gcr.io/distroless/static-debian12:nonroot AS final
 
@@ -30,9 +31,6 @@ LABEL org.opencontainers.image.title="wwwee-server" \
 WORKDIR /
 
 COPY --from=build --chown=nonroot:nonroot /out/wwwee-server /wwwee-server
-# Default content baked in only as a fallback; mount over /srv/content in
-# production to serve real site content without rebuilding the image.
-COPY --chown=nonroot:nonroot content/ /srv/content/
 
 ENV WWWEE_ADDR=:8080 \
     WWWEE_CONTENT_DIR=/srv/content
@@ -42,8 +40,9 @@ USER nonroot:nonroot
 
 EXPOSE 8080
 
-# Web content mount point. Also mount TLS material read-only at a path of
-# your choosing and point WWWEE_TLS_CERT_FILE / WWWEE_TLS_KEY_FILE at it.
+# Site content is supplied by externally managed persistent storage and should
+# be mounted read-only. The server image never contains or modifies production
+# website content.
 VOLUME ["/srv/content"]
 
 # The image has no shell, so the binary performs its own health probe.
