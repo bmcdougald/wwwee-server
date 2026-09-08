@@ -1,0 +1,20 @@
+# Go build artifacts
+/bin/
+/dist/
+*.exe
+*.test
+*.out
+
+# Editor/OS cruft
+.DS_Store
+
+# Node / Vite / Vitest test harness
+test/node_modules/
+test/coverage/
+test/playwright-report/
+test/test-results/
+node_modules/
+
+# OpenSCAP compliance scan output/cache
+/openscap-out/
+/.cache/

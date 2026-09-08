@@ -1,0 +1,15 @@
+{
+  "name": "wwwee-server-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "playwright:install": "playwright install --with-deps chromium"
+  },
+  "devDependencies": {
+    "playwright": "^1.47.0",
+    "vite": "^5.4.0",
+    "vitest": "^2.1.0"
+  }
+}

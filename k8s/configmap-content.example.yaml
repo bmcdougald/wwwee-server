@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wwwee-server-content
+  labels:
+    app.kubernetes.io/name: wwwee-server
+# Generate with:
+#   kubectl create configmap wwwee-server-content \
+#     --from-file=content --dry-run=client -o yaml > k8s/configmap-content.yaml
+# For larger sites, use a PersistentVolumeClaim populated by your content
+# pipeline instead of a ConfigMap (ConfigMaps are capped at 1MiB).
+data:
+  index.html: |
+    <!doctype html>
+    <html lang="en">
+    <head><meta charset="utf-8"><title>Department Intranet</title></head>
+    <body><h1>Department Intranet</h1><p>Replace via ConfigMap or PVC.</p></body>
+    </html>

@@ -1,0 +1,34 @@
+services:
+  wwwee-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: wwwee-server:local
+    ports:
+      - "8080:8080"
+    # --- Hardened runtime settings (Container Platform SRG / CIS Docker Benchmark) ---
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:mode=1700,uid=65532,gid=65532
+    user: "65532:65532"
+    volumes:
+      # Mount real site content read-only; the server never writes to it.
+      - ./content:/srv/content:ro
+      # Optional direct TLS certificate and private-key mount.
+      # - ./certs:/run/tls:ro
+    environment:
+      WWWEE_ADDR: ":8080"
+      WWWEE_CONTENT_DIR: "/srv/content"
+      # WWWEE_TLS_CERT_FILE: "/run/tls/tls.crt"
+      # WWWEE_TLS_KEY_FILE: "/run/tls/tls.key"
+    healthcheck:
+      test: ["CMD", "/wwwee-server", "-healthcheck"]
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+    restart: unless-stopped
