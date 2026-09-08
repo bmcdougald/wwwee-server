@@ -74,11 +74,11 @@ spec:
             - name: tmp
               mountPath: /tmp
       volumes:
-        # Swap for a PersistentVolumeClaim if the site content is larger
-        # than fits comfortably in a ConfigMap.
+        # Site content is supplied by the publishing pipeline through the
+        # shared persistent volume and is mounted read-only by the server.
         - name: content
-          configMap:
-            name: wwwee-server-content
+          persistentVolumeClaim:
+            claimName: wwwee-content
         - name: tls
           secret:
             secretName: wwwee-server-tls
