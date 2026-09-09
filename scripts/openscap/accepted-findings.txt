@@ -12,6 +12,10 @@
 # crypto. The build now uses the Go Cryptographic Module v1.0.0 (CMVP #5247)
 # with FIPS 140-3 mode enabled. Remove these entries after a scan confirms
 # that the SCAP content recognizes the validated module.
+#
+# SV-203649 is the GPOS requirement for authentication TO THE CRYPTOGRAPHIC
+# MODULE. It is not a requirement for this web application to implement user
+# authentication or identity management. Reassess it after the FIPS scan.
 SV-203739r987791_rule
 SV-203776r959006_rule
 SV-203649r971535_rule
