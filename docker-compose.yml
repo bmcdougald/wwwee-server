@@ -6,7 +6,7 @@ services:
       dockerfile: Dockerfile
     image: wwwee-server:local
     ports:
-      - "8080:8080"
+      - "8082:8082"
     # --- Hardened runtime settings (Container Platform SRG / CIS Docker Benchmark) ---
     read_only: true
     security_opt:
@@ -25,7 +25,7 @@ services:
         target: /srv/content
         read_only: true
     environment:
-      WWWEE_ADDR: ":8080"
+      WWWEE_ADDR: ":8082"
       WWWEE_CONTENT_DIR: "/srv/content"
     healthcheck:
       test: ["CMD", "/wwwee-server", "-healthcheck"]
