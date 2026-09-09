@@ -1,11 +1,12 @@
 services:
   wwwee-server:
+    container_name: wwwee-server
     build:
       context: .
       dockerfile: Dockerfile
     image: wwwee-server:local
     ports:
-      - "8080:8080"
+      - "8082:8082"
     # --- Hardened runtime settings (Container Platform SRG / CIS Docker Benchmark) ---
     read_only: true
     security_opt:
@@ -16,15 +17,16 @@ services:
       - /tmp:mode=1700,uid=65532,gid=65532
     user: "65532:65532"
     volumes:
-      # Mount real site content read-only; the server never writes to it.
-      - ./content:/srv/content:ro
-      # Optional direct TLS certificate and private-key mount.
-      # - ./certs:/run/tls:ro
+      # The deployment environment supplies the host path through .env.
+      # Site content is managed outside the container and published by the
+      # deployment/content pipeline. The server only reads it.
+      - type: bind
+        source: ${WWWEE_CONTENT_PATH:?Set WWWEE_CONTENT_PATH in .env}
+        target: /srv/content
+        read_only: true
     environment:
-      WWWEE_ADDR: ":8080"
+      WWWEE_ADDR: ":8082"
       WWWEE_CONTENT_DIR: "/srv/content"
-      # WWWEE_TLS_CERT_FILE: "/run/tls/tls.crt"
-      # WWWEE_TLS_KEY_FILE: "/run/tls/tls.key"
     healthcheck:
       test: ["CMD", "/wwwee-server", "-healthcheck"]
       interval: 30s
@@ -32,3 +34,20 @@ services:
       start_period: 5s
       retries: 3
     restart: unless-stopped
+
+# Direct HTTPS is intentionally configured by the implementer when required.
+# Add these bind mounts under the service's volumes and the corresponding
+# environment variables when using direct TLS:
+#
+#   - type: bind
+#     source: ${WWWEE_TLS_CERT_PATH}
+#     target: /run/tls/tls.crt
+#     read_only: true
+#   - type: bind
+#     source: ${WWWEE_TLS_KEY_PATH}
+#     target: /run/tls/tls.key
+#     read_only: true
+#
+#   WWWEE_ADDR: ":8443"
+#   WWWEE_TLS_CERT_FILE: "/run/tls/tls.crt"
+#   WWWEE_TLS_KEY_FILE: "/run/tls/tls.key"

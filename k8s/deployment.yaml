@@ -27,8 +27,6 @@ spec:
           image: wwwee-server:local
           imagePullPolicy: IfNotPresent
           ports:
-            - name: http
-              containerPort: 8080
             - name: https
               containerPort: 8443
           env:
@@ -36,6 +34,11 @@ spec:
               value: ":8443"
             - name: WWWEE_CONTENT_DIR
               value: /srv/content
+            # The image is built with the validated Go Cryptographic Module
+            # and defaults to FIPS 140-3 mode. Keep the deployment explicit so
+            # the compliance posture is visible in the workload manifest.
+            - name: GODEBUG
+              value: fips140=on
             - name: WWWEE_TLS_CERT_FILE
               value: /run/tls/tls.crt
             - name: WWWEE_TLS_KEY_FILE
@@ -54,14 +57,16 @@ spec:
               memory: 64Mi
           livenessProbe:
             httpGet:
+              scheme: HTTPS
               path: /healthz
-              port: http
+              port: https
             initialDelaySeconds: 3
             periodSeconds: 15
           readinessProbe:
             httpGet:
+              scheme: HTTPS
               path: /readyz
-              port: http
+              port: https
             initialDelaySeconds: 3
             periodSeconds: 10
           volumeMounts:
@@ -74,11 +79,11 @@ spec:
             - name: tmp
               mountPath: /tmp
       volumes:
-        # Swap for a PersistentVolumeClaim if the site content is larger
-        # than fits comfortably in a ConfigMap.
+        # Site content is supplied by the publishing pipeline through the
+        # shared persistent volume and is mounted read-only by the server.
         - name: content
-          configMap:
-            name: wwwee-server-content
+          persistentVolumeClaim:
+            claimName: wwwee-content
         - name: tls
           secret:
             secretName: wwwee-server-tls

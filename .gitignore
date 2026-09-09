@@ -9,6 +9,9 @@
 .DS_Store
 .vscode/
 
+# Local deployment environment configuration
+.env
+
 # Node / Vite / Vitest test harness
 test/node_modules/
 test/coverage/
