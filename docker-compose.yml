@@ -1,5 +1,6 @@
 services:
   wwwee-server:
+    container_name: wwwee-server
     build:
       context: .
       dockerfile: Dockerfile
