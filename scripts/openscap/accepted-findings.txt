@@ -1,4 +1,4 @@
-# OpenSCAP findings reviewed and formally accepted for this image.
+# OpenSCAP findings reviewed for this image.
 #
 # Format: one line per accepted finding — a DISA rule id (or unique
 # substring of one) as it appears in results.xml. Everything after a '#'
@@ -7,12 +7,11 @@
 # Re-review this list whenever the base image, Go toolchain, or SCAP
 # content version changes.
 
-# --- Standard library crypto is not FIPS 140-3 validated -------------------
-# crypto/tls and crypto/x509 in the stock Go toolchain are not an
-# NSA-approved / NIST FIPS-validated cryptographic module. If your
-# environment requires FIPS validation, rebuild with a validated Go
-# toolchain (e.g. GOEXPERIMENT=boringcrypto or a FIPS-certified Go
-# distribution) and re-run this scan.
+# --- FIPS 140-3 crypto ------------------------------------------------------
+# These findings were previously accepted because the image used stock Go
+# crypto. The build now uses the Go Cryptographic Module v1.0.0 (CMVP #5247)
+# with FIPS 140-3 mode enabled. Remove these entries after a scan confirms
+# that the SCAP content recognizes the validated module.
 SV-203739r987791_rule
 SV-203776r959006_rule
 SV-203649r971535_rule
@@ -22,12 +21,13 @@ SV-203649r971535_rule
 # `scripts/openscap-scan.sh` is not configured with
 # WWWEE_TLS_CERT_FILE/WWWEE_TLS_KEY_FILE, so it serves plain HTTP. Deploy
 # with TLS enabled (or terminate TLS at an ingress/load balancer) and treat
-# these as satisfied at the network layer.
+# these as pending until deployment certificates are available and verified.
 SV-203750r958912_rule
 SV-203751r958914_rule
 
 # --- Organization-approved trust anchors ------------------------------------
-# The image ships Debian's default system CA bundle (ca-certificates), not
-# an organization-curated trust store. Mount/replace the trust store at
-# deploy time if your environment mandates custom trust anchors.
+# The image ships Debian's default system CA bundle, not an organization-
+# curated trust store. Determine the required organizational trust-anchor
+# model before removing this acceptance. If custom trust anchors are
+# mandated, mount/replace the trust store at deployment time.
 SV-263659r982563_rule
