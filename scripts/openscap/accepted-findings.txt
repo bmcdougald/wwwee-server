@@ -8,14 +8,46 @@
 # content version changes.
 
 # --- FIPS 140-3 crypto ------------------------------------------------------
-# These findings were previously accepted because the image used stock Go
-# crypto. The build now uses the Go Cryptographic Module v1.0.0 (CMVP #5247)
-# with FIPS 140-3 mode enabled. Remove these entries after a scan confirms
-# that the SCAP content recognizes the validated module.
+# These three findings are accepted because the SCAP content currently used
+# by this scan evaluates the operating system's OpenSSL/FIPS configuration,
+# not the Go Cryptographic Module used by this application. All three rules
+# reference DetectOpenSslTest.xml (oval:org.OpenSsl:def:1) and their manual
+# verification criteria look for OpenSSL-specific files/packages such as
+# fipsmodule.cnf, openssl.cnf, openssl-config-fipshardened, and
+# openssl-provider-fips. The wwwee-server application is a statically linked
+# Go application and does not use the system OpenSSL implementation for its
+# application cryptography. Installing OpenSSL solely to satisfy these
+# checks would therefore test an unrelated crypto implementation and would
+# not establish that the application's cryptography is FIPS validated.
 #
-# SV-203649 is the GPOS requirement for authentication TO THE CRYPTOGRAPHIC
-# MODULE. It is not a requirement for this web application to implement user
-# authentication or identity management. Reassess it after the FIPS scan.
+# The scanned image has nevertheless been independently verified to contain
+# the intended Go Cryptographic Module v1.0.0 implementation. Inspection of
+# the exact /wwwee-server binary extracted from the freshly built scan image
+# shows the module identifier:
+#
+#   crypto/internal/fips140/v1.0.0-c2097c7c
+#
+# The binary also contains the FIPS implementations for AES/AES-GCM, RSA,
+# ECDH, ECDSA, DRBG, HMAC, SHA-256, SHA-512, SHA-3, Ed25519, NIST curves,
+# and the associated FIPS indicator/cache machinery. It additionally
+# contains the symbols:
+#
+#   fipsApproved
+#   fipsIndicator
+#   fipsOnlyBypass
+#
+# This proves that the image actually scanned contains the FIPS-enabled Go
+# cryptographic implementation; the FIPS build changes are present in the
+# scanned artifact. The current SCAP content simply has no test capable of
+# recognizing that implementation because its OVAL check is OpenSSL-specific.
+# These findings should therefore remain accepted as documented scanner/
+# applicability limitations, rather than being "fixed" by adding an
+# unrelated OpenSSL stack to the image.
+#
+# SV-203649 additionally addresses authentication to a cryptographic module.
+# Its supplied SCAP test is the same OpenSSL-specific DetectOpenSslTest.xml
+# check, so it likewise does not evaluate authentication to the Go
+# Cryptographic Module used by this statically linked application.
 SV-203739r987791_rule
 SV-203776r959006_rule
 SV-203649r971535_rule
