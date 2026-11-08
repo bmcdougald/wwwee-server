@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "setup": [
+    {
+      "name": "Rebuild application npm dependencies",
+      "cwd": "test",
+      "argv": ["npm", "rebuild"]
+    }
+  ],
+  "tests": [
+    {
+      "name": "OpenSCAP compliance scan",
+      "cwd": ".",
+      "argv": ["bash", "scripts/openscap-scan.sh"],
+      "suite": "openscap"
+    },
+    {
+      "name": "npm test",
+      "cwd": "test",
+      "argv": ["npm", "run", "test"]
+    }
+  ],
+  "timeout_seconds": 1800
+}

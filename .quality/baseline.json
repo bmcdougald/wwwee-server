@@ -122,6 +122,7 @@
     ".quality/install.py": "455207a43171bf01d8d2d4b28fcd506b41054cba746c523e91e82a46bf0bb977",
     ".quality/run.py": "f6652c5ad3f398726dd5a983a37e31a14b27619d379a0e38215d37e6bc1b8d9d",
     ".quality/jsonc.py": "b8c0930207bf40078c88b5ae68827a46678416198ee788a0713ba74f0d646b10",
-    ".quality/maintenance.py": "addeb2dbba4116e28d0770a69d0577db2729d63abcaed3b161cdfa632e6673c8"
+    ".quality/maintenance.py": "3ffacd82c39f4022073e576f90b0124f2a4d1705b0ce9f77bbc82240119289df",
+    ".quality/ci.py": "c5ea76972a06434fb36de87ace8ae934fd5c382aeff3f1d374ba4211b58ea37c"
   }
 }

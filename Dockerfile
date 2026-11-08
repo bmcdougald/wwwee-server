@@ -5,7 +5,7 @@
 # Module. Nothing from this stage (compiler, shell, package manager) ships
 # in the final image.
 # --------------------------------------------------------------------------
-ARG GO_VERSION=1.26.8
+ARG GO_VERSION=1.26.10
 FROM golang:${GO_VERSION}-alpine AS build
 
 ARG GOFIPS140_VERSION=v1.0.0
