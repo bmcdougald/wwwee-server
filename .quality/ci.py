@@ -52,8 +52,7 @@ def validate_config(config: dict, root: Path | None = None) -> None:
                 or (
                     "suite" in entry
                     and (
-                        group != "tests"
-                        or not isinstance(entry["suite"], str)
+                        not isinstance(entry["suite"], str)
                         or entry["suite"] not in {"general", "browser", "openscap"}
                     )
                 )
@@ -240,7 +239,12 @@ def main(argv: list[str] | None = None) -> int:
                     "cwd": ".",
                     "argv": ["{base_python}", ".quality/install.py", "--restore-tools"],
                 },
-                *(config["setup"] if args.job in {"types", "general", "browser"} else []),
+                *(
+                    entry
+                    for entry in config["setup"]
+                    if args.job in {"types", "general", "browser"}
+                    and ("suite" not in entry or entry["suite"] == args.job)
+                ),
             ]
         )
         for entry in setup:

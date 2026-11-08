@@ -381,6 +381,11 @@ npm test
 The test run builds `wwwee-server:test` and starts/stops a container
 automatically; no manual server setup is required.
 
+CI runs the HTTP checks in the unit/integration job and the real-browser
+checks in the Playwright job. The Playwright job installs Chromium and its
+system dependencies before running the browser tests; both suites still
+run together with `npm test` locally.
+
 ### Compliance scanning (OpenSCAP / GPOS SRG)
 
 [scripts/openscap-scan.sh](scripts/openscap-scan.sh) builds the image and

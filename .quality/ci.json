@@ -5,9 +5,21 @@
       "name": "Rebuild application npm dependencies",
       "cwd": "test",
       "argv": ["npm", "rebuild"]
+    },
+    {
+      "name": "Install Playwright Chromium and system dependencies",
+      "cwd": "test",
+      "argv": ["npm", "run", "playwright:install"],
+      "suite": "browser"
     }
   ],
   "tests": [
+    {
+      "name": "CI suite routing regression tests",
+      "cwd": ".",
+      "argv": ["{base_python}", ".quality/tests/test_ci.py"],
+      "suite": "general"
+    },
     {
       "name": "OpenSCAP compliance scan",
       "cwd": ".",
@@ -15,9 +27,16 @@
       "suite": "openscap"
     },
     {
-      "name": "npm test",
+      "name": "HTTP integration tests",
       "cwd": "test",
-      "argv": ["npm", "run", "test"]
+      "argv": ["npm", "run", "test", "--", "tests/health.test.ts"],
+      "suite": "general"
+    },
+    {
+      "name": "Playwright browser tests",
+      "cwd": "test",
+      "argv": ["npm", "run", "test", "--", "tests/landing.test.ts"],
+      "suite": "browser"
     }
   ],
   "timeout_seconds": 1800
