@@ -39,3 +39,7 @@ blob-report/
 !.vscode/settings.json
 !.vscode/extensions.json
 !.vscode/tasks.json
+
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md
