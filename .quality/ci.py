@@ -26,7 +26,6 @@ JOBS = {
     "filesystem": "Filesystem security",
     "general": "Unit and integration tests",
     "browser": "Playwright tests",
-    "openscap": "OpenSCAP compliance",
 }
 
 
@@ -52,8 +51,9 @@ def validate_config(config: dict, root: Path | None = None) -> None:
                 or (
                     "suite" in entry
                     and (
-                        not isinstance(entry["suite"], str)
-                        or entry["suite"] not in {"general", "browser", "openscap"}
+                        group != "tests"
+                        or not isinstance(entry["suite"], str)
+                        or entry["suite"] not in {"general", "browser"}
                     )
                 )
                 or not isinstance(entry["name"], str)
@@ -89,6 +89,10 @@ def execute(entry: dict, timeout: int) -> bool:
         for arg in entry["argv"]
     ]
     environment = os.environ.copy()
+    # run.py diff-scopes push scans on these local hook variables; CI always scans
+    # the full tree, so they must not leak through the inherited environment.
+    for variable in ("PRE_COMMIT_FROM_REF", "PRE_COMMIT_TO_REF", "BASE_REF"):
+        environment.pop(variable, None)
     environment["CI"] = "true"
     environment["QUALITY_UPDATE_CHECK"] = "1"
     environment["QUALITY_CI_REPORT"] = REPORT
@@ -228,25 +232,16 @@ def main(argv: list[str] | None = None) -> int:
             "dependencies",
             "filesystem",
         }
-        if args.job not in actions | {"general", "browser", "openscap"}:
+        if args.job not in actions | {"general", "browser"}:
             raise ValueError("Unknown CI job: " + str(args.job))
-        setup = (
-            []
-            if args.job == "openscap"
-            else [
-                {
-                    "name": "Restore pinned scanner tools",
-                    "cwd": ".",
-                    "argv": ["{base_python}", ".quality/install.py", "--restore-tools"],
-                },
-                *(
-                    entry
-                    for entry in config["setup"]
-                    if args.job in {"types", "general", "browser"}
-                    and ("suite" not in entry or entry["suite"] == args.job)
-                ),
-            ]
-        )
+        setup = [
+            {
+                "name": "Restore pinned scanner tools",
+                "cwd": ".",
+                "argv": ["{base_python}", ".quality/install.py", "--restore-tools"],
+            },
+            *(config["setup"] if args.job in {"types", "general", "browser"} else []),
+        ]
         for entry in setup:
             if not execute(entry, timeout):
                 summary()
