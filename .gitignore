@@ -22,3 +22,20 @@ node_modules/
 # OpenSCAP compliance scan output/cache
 /openscap-out/
 /.cache/
+.tools/
+.venv/
+__pycache__/
+.ruff_cache/
+.pytest_cache/
+dist/
+build/
+coverage/
+test-results/
+playwright-report/
+blob-report/
+.env.*
+!.env.example
+!.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/tasks.json

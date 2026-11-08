@@ -1,0 +1,29 @@
+{
+"private": true,
+  "devDependencies": {
+    "eslint": "10.14.0",
+    "@eslint/js": "10.0.1",
+    "globals": "17.14.0",
+    "prettier": "3.9.10",
+    "typescript": "5.9.3",
+    "@types/node": "22.19.15",
+    "typescript-eslint": "8.72.1"
+  },
+  "overrides": {
+    "eslint": {
+      "minimatch": "11.0.5"
+    },
+    "typescript-eslint": {
+      "minimatch": "11.0.5"
+    }
+  },
+  "scripts": {
+    "quality": ".tools/venv/bin/python .quality/run.py check",
+    "quality:format": ".tools/venv/bin/python .quality/run.py format",
+    "quality:types": ".tools/venv/bin/python .quality/run.py types",
+    "quality:security": ".tools/venv/bin/python .quality/run.py security",
+    "quality:docker": ".tools/venv/bin/python .quality/run.py docker",
+    "quality:doctor": ".tools/venv/bin/python .quality/run.py doctor",
+    "quality:freshness": ".tools/venv/bin/python .quality/run.py freshness"
+  }
+}

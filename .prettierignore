@@ -1,0 +1,13 @@
+.git
+.venv
+.tools
+node_modules
+dist
+build
+coverage
+test-results/
+playwright-report/
+blob-report/
+package-lock.json
+.env
+.env.*

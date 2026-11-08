@@ -1,0 +1,17 @@
+repos:
+  - repo: local
+    hooks:
+      - id: quality-commit
+        name: Project quality (commit)
+        entry: .tools/venv/bin/python .quality/run.py commit
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+      - id: quality-push
+        name: Project quality (push)
+        entry: .tools/venv/bin/python .quality/run.py push
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
