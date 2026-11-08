@@ -26,6 +26,7 @@ JOBS = {
     "filesystem": "Filesystem security",
     "general": "Unit and integration tests",
     "browser": "Playwright tests",
+    "openscap": "OpenSCAP compliance",
 }
 
 
@@ -51,9 +52,8 @@ def validate_config(config: dict, root: Path | None = None) -> None:
                 or (
                     "suite" in entry
                     and (
-                        group != "tests"
-                        or not isinstance(entry["suite"], str)
-                        or entry["suite"] not in {"general", "browser"}
+                        not isinstance(entry["suite"], str)
+                        or entry["suite"] not in {"general", "browser", "openscap"}
                     )
                 )
                 or not isinstance(entry["name"], str)
@@ -232,16 +232,25 @@ def main(argv: list[str] | None = None) -> int:
             "dependencies",
             "filesystem",
         }
-        if args.job not in actions | {"general", "browser"}:
+        if args.job not in actions | {"general", "browser", "openscap"}:
             raise ValueError("Unknown CI job: " + str(args.job))
-        setup = [
-            {
-                "name": "Restore pinned scanner tools",
-                "cwd": ".",
-                "argv": ["{base_python}", ".quality/install.py", "--restore-tools"],
-            },
-            *(config["setup"] if args.job in {"types", "general", "browser"} else []),
-        ]
+        setup = (
+            []
+            if args.job == "openscap"
+            else [
+                {
+                    "name": "Restore pinned scanner tools",
+                    "cwd": ".",
+                    "argv": ["{base_python}", ".quality/install.py", "--restore-tools"],
+                },
+                *(
+                    entry
+                    for entry in config["setup"]
+                    if args.job in {"types", "general", "browser"}
+                    and ("suite" not in entry or entry["suite"] == args.job)
+                ),
+            ]
+        )
         for entry in setup:
             if not execute(entry, timeout):
                 summary()
