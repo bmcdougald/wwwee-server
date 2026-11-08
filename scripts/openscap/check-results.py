@@ -4,6 +4,7 @@
 Exits 0 if every "fail" result corresponds to an accepted finding (by rule
 id substring match), exits 1 and lists the offending rule ids otherwise.
 """
+
 import re
 import sys
 
@@ -42,7 +43,8 @@ def main(argv):
     unexpected = [rid for rid in failed if not any(a in rid for a in accepted)]
 
     print(f"Total rules evaluated: {len(rules)}")
-    print(f"Failed: {len(failed)} (accepted: {len(failed) - len(unexpected)}, unexpected: {len(unexpected)})")
+    accepted_count = len(failed) - len(unexpected)
+    print(f"Failed: {len(failed)} (accepted: {accepted_count}, unexpected: {len(unexpected)})")
 
     if unexpected:
         print("\nUnexpected OpenSCAP findings (not in accepted-findings.txt):", file=sys.stderr)

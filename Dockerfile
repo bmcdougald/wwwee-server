@@ -20,9 +20,13 @@ COPY go.mod ./
 COPY cmd ./cmd
 COPY internal ./internal
 
+# Verify the built binary embeds the validated Go crypto module. The build info
+# is captured to a file (throwaway build stage) instead of a pipe so the check
+# cannot be masked by pipeline exit-status semantics (DL4006).
 RUN go vet ./... \
     && go build -trimpath -ldflags="-s -w" -o /out/wwwee-server ./cmd/server \
-    && go version -m /out/wwwee-server | grep -q "GOFIPS140.*${GOFIPS140_VERSION}"
+    && go version -m /out/wwwee-server > /tmp/buildinfo \
+    && grep -q "GOFIPS140.*${GOFIPS140_VERSION}" /tmp/buildinfo
 
 # --------------------------------------------------------------------------
 # Final stage: distroless, non-root, no shell/package manager/compiler.
@@ -45,7 +49,9 @@ ENV WWWEE_ADDR=:8080 \
     GODEBUG=fips140=on
 
 # Non-root user provided by the distroless "nonroot" variant (uid/gid 65532).
-USER nonroot:nonroot
+# The numeric form (65532 == nonroot) is used so the id is resolvable and the
+# DL3066 "non-numeric user-id" advisory does not fire.
+USER 65532:65532
 
 EXPOSE 8080
 

@@ -1,15 +1,12 @@
-import { execSync } from "node:child_process";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { BASE_URL, CONTAINER_NAME, IMAGE_TAG, TEST_PORT } from "./config";
+import { execSync } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { BASE_URL, CONTAINER_NAME, IMAGE_TAG, TEST_PORT } from './config';
 
-const repoRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "..",
-);
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 function sh(cmd: string) {
-  execSync(cmd, { cwd: repoRoot, stdio: "inherit" });
+  execSync(cmd, { cwd: repoRoot, stdio: 'inherit' });
 }
 
 async function waitForHealthy(timeoutMs = 60_000) {
@@ -34,7 +31,7 @@ export default async function setup() {
   try {
     execSync(`docker rm -f ${CONTAINER_NAME}`, {
       cwd: repoRoot,
-      stdio: "ignore",
+      stdio: 'ignore',
     });
   } catch {
     // no pre-existing container from a previous failed run
@@ -45,7 +42,7 @@ export default async function setup() {
     `docker run -d --rm --name ${CONTAINER_NAME} -p ${TEST_PORT}:8080 ` +
       `--read-only --cap-drop=ALL --security-opt no-new-privileges ` +
       `--tmpfs /tmp:mode=1700 ` +
-      `-v "${path.join(repoRoot, "content")}:/srv/content:ro" ${IMAGE_TAG}`,
+      `-v "${path.join(repoRoot, 'content')}:/srv/content:ro" ${IMAGE_TAG}`,
   );
 
   await waitForHealthy();
@@ -54,7 +51,7 @@ export default async function setup() {
     try {
       execSync(`docker stop ${CONTAINER_NAME}`, {
         cwd: repoRoot,
-        stdio: "ignore",
+        stdio: 'ignore',
       });
     } catch {
       // already stopped

@@ -6,7 +6,7 @@ services:
       dockerfile: Dockerfile
     image: wwwee-server:local
     ports:
-      - "8082:8082"
+      - '8082:8082'
     # --- Hardened runtime settings (Container Platform SRG / CIS Docker Benchmark) ---
     read_only: true
     security_opt:
@@ -15,7 +15,7 @@ services:
       - ALL
     tmpfs:
       - /tmp:mode=1700,uid=65532,gid=65532
-    user: "65532:65532"
+    user: '65532:65532'
     volumes:
       # The deployment environment supplies the host path through .env.
       # Site content is managed outside the container and published by the
@@ -25,10 +25,10 @@ services:
         target: /srv/content
         read_only: true
     environment:
-      WWWEE_ADDR: ":8082"
-      WWWEE_CONTENT_DIR: "/srv/content"
+      WWWEE_ADDR: ':8082'
+      WWWEE_CONTENT_DIR: '/srv/content'
     healthcheck:
-      test: ["CMD", "/wwwee-server", "-healthcheck"]
+      test: ['CMD', '/wwwee-server', '-healthcheck']
       interval: 30s
       timeout: 5s
       start_period: 5s

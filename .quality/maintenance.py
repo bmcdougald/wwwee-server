@@ -113,6 +113,7 @@ def audit_node(root: Path, config: dict[str, Any], *, offline: bool = False) -> 
             Path(name).relative_to(directory.relative_to(root)).as_posix(): values
             for name, values in owners.items()
             if Path(name).is_relative_to(directory.relative_to(root))
+            and Path(name).parent in covered
         }
         for location in packages:
             if "node_modules" in Path(location).parts:

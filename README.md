@@ -143,11 +143,11 @@ as the template.
 | `WWWEE_ADDR`                                 | `:8080`        | Listen address                                   |
 | `WWWEE_CONTENT_DIR`                          | `/srv/content` | Directory to serve                               |
 | `WWWEE_TLS_CERT_FILE` / `WWWEE_TLS_KEY_FILE` | unset          | Enable TLS (both required together)              |
-| `WWWEE_READ_HEADER_TIMEOUT`                  | `5s`            | Slowloris mitigation                             |
-| `WWWEE_READ_TIMEOUT`                         | `10s`           | Max time to read a request                       |
-| `WWWEE_WRITE_TIMEOUT`                        | `10s`           | Max time to write a response                     |
+| `WWWEE_READ_HEADER_TIMEOUT`                  | `5s`           | Slowloris mitigation                             |
+| `WWWEE_READ_TIMEOUT`                         | `10s`          | Max time to read a request                       |
+| `WWWEE_WRITE_TIMEOUT`                        | `10s`          | Max time to write a response                     |
 | `WWWEE_IDLE_TIMEOUT`                         | `120s`         | Keep-alive idle timeout                          |
-| `WWWEE_SHUTDOWN_TIMEOUT`                     | `15s`           | Grace period for in-flight requests on `SIGTERM` |
+| `WWWEE_SHUTDOWN_TIMEOUT`                     | `15s`          | Grace period for in-flight requests on `SIGTERM` |
 
 ### Deployment path configuration
 
@@ -254,26 +254,26 @@ HTTPS, add the following TLS mounts to the service's `volumes` section in
 `docker-compose.yml`:
 
 ```yaml
-      - type: bind
-        source: ${WWWEE_TLS_CERT_PATH}
-        target: /run/tls/tls.crt
-        read_only: true
-      - type: bind
-        source: ${WWWEE_TLS_KEY_PATH}
-        target: /run/tls/tls.key
-        read_only: true
+- type: bind
+  source: ${WWWEE_TLS_CERT_PATH}
+  target: /run/tls/tls.crt
+  read_only: true
+- type: bind
+  source: ${WWWEE_TLS_KEY_PATH}
+  target: /run/tls/tls.key
+  read_only: true
 ```
 
 and configure the service environment and port mapping for HTTPS:
 
 ```yaml
-    ports:
-      - "8443:8443"
-    environment:
-      WWWEE_ADDR: ":8443"
-      WWWEE_CONTENT_DIR: "/srv/content"
-      WWWEE_TLS_CERT_FILE: "/run/tls/tls.crt"
-      WWWEE_TLS_KEY_FILE: "/run/tls/tls.key"
+ports:
+  - '8443:8443'
+environment:
+  WWWEE_ADDR: ':8443'
+  WWWEE_CONTENT_DIR: '/srv/content'
+  WWWEE_TLS_CERT_FILE: '/run/tls/tls.crt'
+  WWWEE_TLS_KEY_FILE: '/run/tls/tls.key'
 ```
 
 The mounted key must be readable by the container's non-root uid `65532`

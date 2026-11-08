@@ -1,1 +1,1 @@
-document.documentElement.dataset.intranetReady = "true";
+document.documentElement.dataset.intranetReady = 'true';

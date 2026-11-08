@@ -1,5 +1,5 @@
 {
-"compilerOptions": {
+  "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
     "noEmit": true,
@@ -10,16 +10,6 @@
     "jsx": "preserve",
     "skipLibCheck": true
   },
-  "include": [
-    "**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    ".venv",
-    ".tools",
-    ".quality",
-    "dist",
-    "build",
-    "vendor"
-  ]
+  "include": ["**/*"],
+  "exclude": ["node_modules", ".venv", ".tools", ".quality", "dist", "build", "vendor"]
 }

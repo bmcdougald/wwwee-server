@@ -31,7 +31,7 @@ spec:
               containerPort: 8443
           env:
             - name: WWWEE_ADDR
-              value: ":8443"
+              value: ':8443'
             - name: WWWEE_CONTENT_DIR
               value: /srv/content
             # The image is built with the validated Go Cryptographic Module
@@ -47,7 +47,7 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
-              drop: ["ALL"]
+              drop: ['ALL']
           resources:
             requests:
               cpu: 10m
